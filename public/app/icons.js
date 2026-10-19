@@ -1,0 +1,30 @@
+export const glyphs={
+  home:'M4 10 12 4l8 6v10h-6v-6h-4v6H4Z',
+  wallet:'M4 7h16v13H4z M4 7V4h12v3 M15 12h6v4h-6z',
+  history:'M6 3h12v18l-3-2-3 2-3-2-3 2Z M9 8h6 M9 12h6',
+  learn:'M3 5h6l3 3 3-3h6v14h-6l-3 2-3-2H3Z M12 8v13',
+  plus:'M12 5v14 M5 12h14',arrow:'M5 12h14 M14 7l5 5-5 5',
+  down:'M12 4v16 M6 14l6 6 6-6',up:'M12 20V4 M6 10l6-6 6 6',
+  calendar:'M5 5h14v16H5z M8 2v6 M16 2v6 M5 10h14',
+  eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+  clock:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M12 7v5l3 2',
+  check:'m5 12 4 4L19 6',edit:'m4 16 12-12 4 4L8 20H4Z',
+  lock:'M5 10h14v11H5z M8 10V6a4 4 0 0 1 8 0v4',
+  info:'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 M12 11v5 M12 7v1',
+  food:'M5 3v6m3-6v6m3-6v6M5 7h6v3l-3 3v8M19 3c-4 2-4 8 0 9v9M19 3v9',
+  bus:'M5 17V5c0-3 14-3 14 0v12H5Z M5 10h14 M8 4v6 M5 14h2 M17 14h2 M7 17v4 M17 17v4',
+  book:'M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3V4Z M4 16h15 M8 8h7 M8 11h5',
+  drink:'M5 7h14l-2 14H7Z M4 7h16 M13 7l3-5h4',
+  goal:'M20 12a8 8 0 1 1-8-8 M12 8a4 4 0 1 0 4 4 M12 12l9-9 M17 3h4v4',
+  medal:'M9 13 6 21l6-3 6 3-3-8 M17 8A5 5 0 1 1 7 8a5 5 0 0 1 10 0',
+  shoe:'m4 5 5 2 1 6 4 2 4-1 3 4v3H3V11Z M10 11l3-2 M12 14l3-2',
+  bag:'M4 7h16v14H4Z M8 7V5a4 4 0 0 1 8 0v2 M8 11v2 M16 11v2',
+  headphones:'M4 13v-2a8 8 0 0 1 16 0v2 M4 12h4v8H4Z M16 12h4v8h-4Z',
+  bike:'M9 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M23 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M5 16l6-10 8 10M5 16h9L9 6H6 M15 3h3v3',
+  logout:'M9 4H4v16h5 M10 12h11 M17 8l4 4-4 4',
+  cloud:'M7 18a5 5 0 1 1-1-10 7 7 0 0 1 13 1 4.5 4.5 0 0 1-1 9Z M9 13l2 2 4-4',
+  leaf:'M4 19C0 7 11 2 20 3c1 12-6 20-16 16Zm0 0L15 8',
+};
+export const icon=(name)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${glyphs[name]||glyphs.goal}"/></svg>`;
+export const goalIcon=emoji=>icon(({'👟':'shoe','🎧':'headphones','📚':'book','🚲':'bike','🎒':'bag'})[emoji]||'goal');
+export const brand=()=>`<a class="brand" href="#beranda" aria-label="SakuPintar beranda"><img class="logo-mark" src="./icon.svg" alt="" width="40" height="40"><span>SakuPintar<span class="brand-period">.</span><small>Uang saku, tertata.</small></span></a>`;

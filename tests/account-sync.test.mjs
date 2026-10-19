@@ -1,0 +1,30 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {initialState,key} from '../public/app/core.mjs';
+
+test('Antrian offline dicoba ulang, data tersimpan per akun, dan konflik diblokir',async()=>{
+  const saved=new Map();
+  globalThis.window={addEventListener(){}};
+  globalThis.localStorage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
+  const first=initialState();first.name='Siswa A';
+  globalThis.fetch=async()=>({ok:true,json:async()=>({user:{id:'user-a',name:'Siswa A'},account:{state:first,revision:1}})});
+  const account=await import('../public/app/account.js?unit-sync');
+  await account.loadAccount();
+  const next={...first,name:'Nama baru'};
+  account.accountStorage.setItem(key,JSON.stringify(next));
+  let attempts=0;
+  globalThis.fetch=async()=>{attempts++;throw Error('Offline');};
+  await account.syncAccount();assert.equal(account.hasPending(),true);
+  globalThis.fetch=async(_url,options)=>{attempts++;const data=JSON.parse(options.body);assert.equal(data.state.name,'Nama baru');return {ok:true,json:async()=>({revision:2})};};
+  await account.syncAccount();assert.equal(account.hasPending(),false);assert.equal(attempts,2);
+  assert.ok(saved.has(`${key}:account:user-a:cache`));
+  const second=initialState();second.name='Siswa B';
+  globalThis.fetch=async()=>({ok:true,json:async()=>({user:{id:'user-b'},account:{state:second,revision:1}})});
+  const other=await import('../public/app/account.js?unit-other');
+  const loaded=await other.loadAccount();assert.equal(loaded.account.state.name,'Siswa B');assert.ok(saved.has(`${key}:account:user-b:cache`));
+  other.accountStorage.setItem(key,JSON.stringify({...second,name:'Edit lain'}));
+  globalThis.fetch=async()=>({ok:false,status:409});
+  await other.syncAccount();assert.equal(other.isConflicted(),true);
+  assert.throws(()=>other.accountStorage.setItem(key,JSON.stringify(second)),/Unduh cadangan/);
+  assert.equal(JSON.parse(saved.get(`${key}:account:user-a:cache`)).state.name,'Nama baru');
+});
