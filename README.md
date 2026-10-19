@@ -1,34 +1,34 @@
-# SakuPintar
+﻿# SakuPintar
 
-Uang saku, tertata. Website pengelola uang saku dengan akun ChatGPT, catatan pribadi, celengan, dan pelajaran singkat untuk siswa SMP.
+Uang saku, tertata. Website pengelola uang saku, celengan impian, dan pelajaran singkat untuk siswa SMP.
 
 ## Versi ini
 
-- Halaman Masuk dan Daftar yang terpisah dari dashboard.
-- Login resmi melalui Sign in with ChatGPT; aplikasi tidak meminta atau menyimpan password ChatGPT.
-- Pendaftaran profil SakuPintar dengan nama panggilan.
-- Catatan disimpan di Cloudflare D1 berdasarkan ID pengguna dari server. Payload browser tidak dapat memilih pemilik catatan.
-- Dashboard, quick log, beberapa celengan, riwayat, XP, dan tiga kuis.
-- Desain warna kertas dan hijau tua, ikon garis, logo saku dan koin dalam SVG.
-- Cadangan JSON serta impor eksplisit data browser dari versi pertama.
+- Daftar dengan nama panggilan, email, dan kata sandi; masuk menggunakan email dan kata sandi.
+- Autentikasi Better Auth, hash kata sandi, sesi cookie HttpOnly, pemeriksaan origin, dan pembatasan percobaan masuk.
+- Catatan pribadi di Cloudflare D1. Pemilik catatan ditentukan dari sesi server, bukan payload browser.
+- Dashboard, catat cepat, beberapa celengan, riwayat, XP, dan tiga kuis.
+- Desain hijau tua dan kertas, logo saku/koin SVG, tulisan isi 16 px dan form yang mudah dibaca.
+- Cadangan JSON dan impor eksplisit catatan browser versi pertama.
 
 ## Menjalankan dari VS Code
 
-Memerlukan Node.js 22.13 atau lebih baru.
+Memerlukan Node.js 22.13 atau lebih baru. Edit sumber di `public/app/`; `dist/` adalah hasil build.
 
 ```sh
 npm ci
 npm run build
 ```
 
-Untuk database pengembangan, jalankan migrasi lokal satu kali pada database baru:
+Untuk database lokal baru, jalankan kedua migrasi secara berurutan satu kali. Jika migrasi pertama sudah pernah diterapkan, jalankan hanya migrasi kedua.
 
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_perfect_nick_fury.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_fair_magdalene.sql
 npm run dev -- --port 7357 --hostname 127.0.0.1
 ```
 
-Buka http://127.0.0.1:7357/app/. Starter resmi menyediakan simulasi login hanya di loopback pengembangan, dengan akun `seedy@sites.test`. Simulasi ini tidak disertakan dalam build produksi. Penerapan asli menggunakan identitas yang diberikan hosting Sites.
+Buka http://127.0.0.1:7357/app/ dan buat akun uji sendiri. Akun email lokal memakai database lokal. Kunci pengembangan hanya berlaku pada loopback. Produksi wajib memiliki runtime secret `BETTER_AUTH_SECRET`, yang diatur melalui pengelola rahasia hosting dan tidak dimasukkan ke repository.
 
 ## Pemeriksaan
 
@@ -38,33 +38,37 @@ npx tsc --noEmit
 npm run build
 ```
 
-Saat server lokal di port 7357 aktif dan migrasi sudah diterapkan:
+Saat server lokal port 7357 aktif dan migrasi sudah diterapkan:
 
 ```sh
 npm run test:accounts
 ```
 
-Tes akun menggunakan data simulasi pada database lokal, bukan akun atau uang sungguhan. Jika database lokal sudah berisi akun uji, tes melanjutkan profil uji tersebut.
+Tes akun membuat dua akun sintetis dengan kredensial acak yang tidak dicetak. Tes memeriksa daftar, masuk, keluar, pemisahan akun, penolakan origin asing, dan konflik revisi. Database pengujian tidak disertakan dalam source.
 
 ## Struktur
 
-- `public/app/`: tampilan aplikasi, halaman akun, logo, dan perhitungan saldo.
-- `app/api/wallet/route.ts`: API profil dan catatan; autentikasi, validasi, dan pemeriksaan pemilik dijalankan di server.
-- `app/chatgpt-auth.ts`: integrasi identitas resmi dari starter Sites.
-- `db/schema.ts` dan `drizzle/`: skema dan migrasi database akun.
+- `public/app/`: tampilan, logo, perhitungan saldo, dan sinkronisasi.
+- `public/app/email-entry.js`: form masuk/daftar dan alur sesi.
+- `public/app/readability.css`: ukuran tulisan dan penyempurnaan tampilan responsif.
+- `lib/auth.ts` dan `app/api/auth/`: autentikasi email dan sesi.
+- `app/api/wallet/route.ts`: profil dan catatan dengan validasi serta pemeriksaan pemilik di server.
+- `db/schema.ts` dan `drizzle/`: skema dan migrasi database.
 - `build/` dan `scripts/`: integrasi build Vinext/Sites.
-- `tests/`: tes logika, antrean sinkronisasi, dan integrasi API akun.
+- `tests/`: pemeriksaan logika, sinkronisasi, dan integrasi akun.
 
-## Catatan penyimpanan
+## Penyimpanan dan batas fitur
 
-Masuk memerlukan koneksi internet. Setelah sesi aplikasi terbuka, perubahan disimpan pada salinan lokal khusus akun dan dikirim ke server. Jika koneksi putus, indikator menampilkan status offline; perubahan dicoba ulang saat koneksi kembali. Setelah logout atau membuka sesi baru, aplikasi memverifikasi akun ke server terlebih dahulu.
+Masuk memerlukan internet. Saat sesi aplikasi terbuka, perubahan disimpan pada salinan lokal khusus akun lalu dikirim ke server. Perubahan saat koneksi putus dicoba kembali ketika koneksi pulih. Setelah keluar atau membuka sesi baru, aplikasi memverifikasi sesi ke server.
 
-Catatan dengan versi lama ditolak agar tidak menimpa perubahan dari perangkat lain. Jika muncul konflik, buka pengaturan, pilih Selaraskan data, unduh cadangan lokal, lalu muat salinan server. Penggabungan otomatis dua catatan yang berbeda belum tersedia.
+Revisi lama ditolak agar tidak menimpa perubahan perangkat lain. Jika ada konflik, unduh cadangan lokal melalui Pengaturan, lalu pilih salinan server. Penggabungan otomatis belum tersedia.
 
-Cadangan JSON berisi riwayat uang saku. Simpan cadangan di tempat pribadi. Data lama dari versi pertama tidak dipindahkan otomatis: pilih Impor catatan versi lama pada perangkat/browser yang memiliki catatan tersebut. Tidak ada data nyata atau akun uji lokal yang dimasukkan ke source repository.
+Akun email baru memiliki ruang catatan tersendiri. Catatan akun ChatGPT sebelumnya tetap disimpan tetapi tidak otomatis ditautkan ke alamat email baru. Cadangan JSON dapat diimpor melalui Pengaturan. Simpan cadangan di tempat pribadi.
+
+Verifikasi email dan pemulihan kata sandi lewat email belum tersedia; versi ini belum menggunakan layanan pengiriman email.
 
 ## Hosting
 
-Website memakai Worker Vinext dan database D1 melalui Sites. Situs tetap privat sesuai pengaturan sebelumnya; gerbang akses hosting ChatGPT tetap dapat muncul sebelum halaman SakuPintar. Pendaftaran profil aplikasi tidak mengubah izin akses hosting.
+Website menggunakan Worker Vinext dan Cloudflare D1 melalui Sites. Pengaturan akses hosting terpisah dari akun aplikasi: situs privat masih dapat menampilkan gerbang ChatGPT sebelum halaman SakuPintar. Menghilangkan gerbang itu memerlukan izin pemilik untuk membuka halaman masuk kepada siapa saja yang memiliki tautan. Catatan tetap memerlukan sesi akun dan dilindungi API.
 
-GitHub menyimpan source dan menjalankan pemeriksaan. Versi dengan akun dan database ini tidak lagi cocok untuk GitHub Pages yang hanya menyajikan file statis; workflow Pages diganti dengan pemeriksaan CI. Publikasi Sites menerapkan migrasi database dan build yang sama dengan source tersimpan.
+GitHub menyimpan source dan menjalankan CI. Aplikasi server dengan database ini memerlukan hosting Worker; GitHub Pages tidak menjalankan API akun. Publikasi Sites menerapkan migrasi dan build dari source tersimpan.

@@ -1,33 +1,58 @@
-// Uses only the starter's loopback-only simulated identity, never real credentials.
+﻿// Synthetic accounts exercise the real cookie/session and database paths.
 import assert from 'node:assert/strict';
-import {initialState,record} from '../public/app/core.mjs';
-const origin='http://127.0.0.1:7357';
-const request=(path,options={})=>fetch(origin+path,{redirect:'manual',...options});
-const counters=[];
-function pass(message){counters.push(message);console.log('PASS',message);}
-const anonymous=await request('/api/wallet');
-assert.equal(anonymous.status,200);assert.equal((await anonymous.json()).user,null);pass('Pengunjung anonim belum memiliki sesi');
-const denied=await request('/api/wallet',{method:'PUT',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify({state:initialState(),revision:1})});
-assert.equal(denied.status,401);pass('Penulisan tanpa sesi ditolak');
-const signin=await request('/signin-with-chatgpt?return_to=/app/');
-const cookie=signin.headers.get('set-cookie')?.split(';')[0];
-assert.ok(cookie,'Local mock sign-in must issue its development cookie');
-let res=await request('/api/wallet',{headers:{Cookie:cookie}});let data=await res.json();
-assert.equal(data.user.id,'local_seedy');
-if(!data.account){res=await request('/api/wallet',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({name:'Akun Uji',userId:'client-cannot-choose-owner'})});assert.equal(res.status,201);pass('Pendaftaran membuat profil untuk identitas server');}
-else pass('Profil uji yang sudah ada dipakai kembali');
-res=await request('/api/wallet',{headers:{Cookie:cookie}});data=await res.json();assert.ok(data.account);
-const revision=data.account.revision;
-let next=record(data.account.state,{kind:'income',label:'Pemasukan uji otomatis',amount:100000,emoji:'💸'});
+import {randomUUID} from 'node:crypto';
+import {record} from '../public/app/core.mjs';
+const origin=process.env.SAKU_TEST_ORIGIN||'http://127.0.0.1:7357';
+const bypass=process.env.SAKU_TEST_BYPASS;
+const stamp=randomUUID();
+const password=randomUUID()+'Aa!9';
+let checks=0;
+const pass=message=>{checks++;console.log('PASS',message);};
+function client(){
+  let cookie='';
+  return async(path,{method='GET',body,foreignOrigin}={})=>{
+    const headers={Origin:foreignOrigin||origin};
+    if(cookie)headers.Cookie=cookie;
+    if(bypass)headers['OAI-Sites-Authorization']=`Bearer ${bypass}`;
+    if(body!==undefined)headers['Content-Type']='application/json';
+    const response=await fetch(origin+path,{redirect:'manual',method,headers,body:body===undefined?undefined:JSON.stringify(body)});
+    const cookies=response.headers.getSetCookie();
+    if(cookies.length){
+      const jar=new Map(cookie.split('; ').filter(Boolean).map(v=>{const i=v.indexOf('=');return [v.slice(0,i),v.slice(i+1)];}));
+      for(const line of cookies){const pair=line.split(';')[0],i=pair.indexOf('=');jar.set(pair.slice(0,i),pair.slice(i+1));}
+      cookie=[...jar].map(([k,v])=>`${k}=${v}`).join('; ');
+    }
+    return response;
+  };
+}
+const a=client(),b=client(),anon=client();
+let response=await anon('/api/wallet');assert.equal(response.status,200);assert.equal((await response.json()).user,null);
+response=await anon('/api/wallet',{method:'PUT',body:{}});assert.equal(response.status,401);pass('Catatan ditutup untuk pengunjung tanpa sesi');
+const emailA=`saku-test-${stamp}-a@example.test`,emailB=`saku-test-${stamp}-b@example.test`;
+response=await a('/api/auth/sign-up/email',{method:'POST',body:{name:'Pelajar A',email:emailA,password}});
+assert.equal(response.status,200,await response.clone().text());
+assert.ok(response.headers.getSetCookie().some(v=>/httponly/i.test(v)));
+if(origin.startsWith('https:'))assert.ok(response.headers.getSetCookie().some(v=>/; secure/i.test(v)));
+pass('Daftar email membuat sesi dengan cookie HttpOnly');
+response=await a('/api/wallet');let data=await response.json();assert.ok(data.user.id.startsWith('email:'));assert.equal(data.account,null);
+const ownerA=data.user.id;
+response=await a('/api/wallet',{method:'POST',body:{name:'Pelajar A',userId:'forged-owner'}});assert.equal(response.status,201);
+data=await response.json();let next=record(data.account.state,{kind:'income',label:'Pemasukan uji otomatis',amount:100000,emoji:'💸'});
 next=record(next,{kind:'saving',label:'Tabungan uji otomatis',amount:5000,emoji:'🐷',goalId:next.goals[0].id});
-res=await request('/api/wallet',{method:'PUT',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({state:next,revision,userId:'client-cannot-choose-owner'})});
-assert.equal(res.status,200);assert.equal((await res.json()).revision,revision+1);pass('Catatan valid tersimpan di akun yang sedang masuk');
-res=await request('/api/wallet',{method:'PUT',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({state:next,revision})});assert.equal(res.status,409);pass('Versi lama ditolak agar tidak menimpa perubahan perangkat lain');
-res=await request('/api/wallet',{method:'PUT',headers:{Cookie:cookie,Origin:'https://different-origin.example','Content-Type':'application/json'},body:JSON.stringify({state:next,revision:revision+1})});assert.ok([400,403].includes(res.status));pass('Permintaan tulis dari origin lain ditolak');
-res=await request('/api/wallet',{method:'PUT',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({state:{...next,name:''},revision:revision+1})});assert.equal(res.status,400);pass('Catatan tidak valid ditolak di server');
-res=await request('/api/wallet',{method:'POST',headers:{Cookie:cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({name:'Akun ganda'})});assert.equal(res.status,409);pass('Pendaftaran profil ganda ditolak');
-res=await request('/signout-with-chatgpt?return_to=/app/');const expiredCookie=res.headers.get('set-cookie')?.split(';')[0];assert.ok(expiredCookie);
-res=await request('/api/wallet',{headers:{Cookie:expiredCookie}});assert.equal((await res.json()).user,null);pass('Keluar menghapus sesi pengembangan');
-const signBack=await request('/signin-with-chatgpt?return_to=/app/');const again=signBack.headers.get('set-cookie')?.split(';')[0];
-res=await request('/api/wallet',{headers:{Cookie:again}});const restored=await res.json();assert.deepEqual(restored.account.state,next);pass('Masuk kembali memulihkan catatan akun dari database');
-console.log(`${counters.length} pemeriksaan integrasi akun lulus.`);
+response=await a('/api/wallet',{method:'PUT',body:{state:next,revision:1,userId:'forged-owner'}});assert.equal(response.status,200);
+pass('Saldo dan tabungan tersimpan dengan pemilik dari sesi server');
+response=await a('/api/wallet',{method:'PUT',body:{state:next,revision:1}});assert.equal(response.status,409);pass('Versi lama tidak menimpa data terbaru');
+response=await a('/api/wallet',{method:'PUT',foreignOrigin:'https://different-origin.example',body:{state:next,revision:2}});assert.ok([400,403].includes(response.status));
+response=await a('/api/auth/sign-out',{method:'POST',foreignOrigin:'https://different-origin.example',body:{}});assert.ok([400,403].includes(response.status));pass('Permintaan dari origin asing ditolak');
+response=await a('/api/wallet',{method:'PUT',body:{state:{...next,name:''},revision:2}});assert.equal(response.status,400);pass('Data catatan tidak valid ditolak');
+response=await a('/api/auth/sign-out',{method:'POST',body:{}});assert.equal(response.status,200);
+response=await a('/api/wallet');assert.equal((await response.json()).user,null);pass('Keluar mengakhiri sesi');
+response=await a('/api/auth/sign-in/email',{method:'POST',body:{email:emailA,password:'deliberately-wrong-password'}});assert.equal(response.status,401);pass('Kata sandi salah ditolak');
+response=await a('/api/auth/sign-in/email',{method:'POST',body:{email:emailA,password}});assert.equal(response.status,200);
+response=await a('/api/wallet');data=await response.json();assert.equal(data.user.id,ownerA);assert.deepEqual(data.account.state,next);pass('Masuk kembali memulihkan catatan akun');
+response=await b('/api/auth/sign-up/email',{method:'POST',body:{name:'Pelajar B',email:emailB,password}});assert.equal(response.status,200,await response.clone().text());
+response=await b('/api/wallet');data=await response.json();assert.notEqual(data.user.id,ownerA);assert.equal(data.account,null);
+response=await b('/api/wallet',{method:'POST',body:{name:'Pelajar B',userId:ownerA}});assert.equal(response.status,201);
+response=await a('/api/wallet');assert.deepEqual((await response.json()).account.state,next);pass('Akun kedua tidak dapat memilih atau menimpa catatan akun pertama');
+for(const c of [a,b]){response=await c('/api/auth/sign-out',{method:'POST',body:{}});assert.equal(response.status,200);}
+console.log(`${checks} pemeriksaan integrasi akun email lulus.`);

@@ -13,13 +13,14 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "test": "node --test tests/core.test.mjs tests/account-sync.test.mjs",
-    "check": "node --check public/app/app.js && node --check public/app/entry.js && node --check public/app/account.js && node --test tests/core.test.mjs tests/account-sync.test.mjs",
+    "check": "node --check public/app/app.js && node --check public/app/email-entry.js && node --check public/app/account.js && node --test tests/core.test.mjs tests/account-sync.test.mjs",
     "test:accounts": "node tests/accounts.integration.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.7.1",
     "@shadcn/react": "^0.3.0",
+    "better-auth": "^1.7.11",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
