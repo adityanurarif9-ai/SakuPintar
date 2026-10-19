@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#087c60"><meta name="description" content="Teman uang saku kamu. Catat jajan, kumpulkan tabungan, dan wujudkan impian kecilmu bersama SakuPintar.">
+  <title>SakuPintar — Langkah kecil, impian besar</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a href="#main" class="skip-link">Langsung ke konten</a>
+  <aside class="sidebar">
+    <a class="brand" href="#beranda" aria-label="SakuPintar beranda"><span class="brand-icon">s<span>✦</span></span><span>Saku<span class="brand-green">Pintar</span><small>TEMAN UANG SAKUMU</small></span></a>
+    <div class="nav-caption">RUANG KAMU</div><nav aria-label="Navigasi utama" id="navigation"></nav>
+    <div class="sidebar-tip"><span class="tip-spark">✦</span><div>Impian besar dimulai<br>dari receh kecil.</div><p>Yuk, sisihkan sedikit hari ini!</p><button class="text-button" data-action="go-goals">Lihat celenganku <span>↗</span></button><span class="tip-coin">Rp</span></div>
+    <div class="sidebar-bottom"><span class="local-dot"></span> Disimpan di perangkatmu <span title="Tidak memerlukan akun atau backend">ⓘ</span></div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar"><div class="breadcrumb">Ruang kamu <span>/</span> <strong id="breadcrumb">Beranda</strong></div><div class="topbar-right"><span class="date-label" id="date-label"></span><button class="profile-button" data-action="settings" aria-label="Pengaturan profil dan uang saku"><span class="avatar">A</span><span id="profile-name">Mass Adit</span><span class="chevron">⌄</span></button></div></header>
+    <main id="main" tabindex="-1"></main>
+    <footer class="footer"><span>🌱 Sedikit demi sedikit, jadi bukit.</span><span>SakuPintar · Teman tumbuhmu</span></footer>
+  </div>
+  <nav class="mobile-nav" id="mobile-navigation" aria-label="Navigasi mobile"></nav>
+  <dialog id="dialog"><div id="dialog-content"></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
